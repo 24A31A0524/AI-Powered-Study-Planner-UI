@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Study Planner - Personal Edition</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary: #8b5cf6;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --dark: #0f172a;
+  --dark-100: #1e293b;
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-500: #64748b;
+  --gray-700: #334155;
+  --gray-900: #0f172a;
+  --white: #ffffff;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { 
+  font-family: 'Inter', sans-serif; 
+  background: linear-gradient(135deg, var(--gray-50) 0%, #e0e7ff 100%);
+  min-height: 100vh;
+  color: var(--gray-700);
+  transition: background 0.3s;
+}
+
+body.dark {
+  background: var(--dark);
+  --gray-50: #0f0f23;
+  --gray-100: #151632;
+  --gray-200: #1f1f3d;
+  --gray-500: #94a3b8;
+  --gray-700: #e2e8f0;
+  --gray-900: #f1f5f9;
+  --white: #1e1e2e;
+}
+
+.app-container { display: flex; min-height: 100vh; }
+
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--gray-200);
+  z-index: 1000;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-sm);
+}
+
+body.dark .header {
+  background: rgba(30,30,46,0.95);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--gray-700);
+}
+
+.theme-toggle { 
+  background: none; 
+  border: 2px solid var(--gray-200); 
+  width: 40px; 
+  height: 40px; 
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-toggle:hover { background: var(--gray-100); }
+
+.sidebar {
+  width: 260px;
+  background: var(--white);
+  border-right: 1px solid var(--gray-200);
+  position: fixed;
+  top: 80px;
+  height: calc(100vh - 80px);
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+  z-index: 999;
+  transition: transform 0.3s;
+}
+
+.sidebar-nav {
+  padding: 1.5rem 0;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.5rem;
+  color: var(--gray-700);
+  text-decoration: none;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  margin: 0.25rem 0;
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  background: var(--gray-50);
+  color: var(--primary);
+  border-left-color: var(--primary);
+}
+
+.nav-item.active {
+  background: var(--primary);
+  color: var(--white);
+  border-left-color: var(--white);
+}
+
+.nav-item i { font-size: 1.1rem; width: 20px; }
+
+.main-content {
+  margin-left: 260px;
+  margin-top: 80px;
+  padding: 2rem;
+  width: calc(100% - 260px);
+  transition: all 0.3s;
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+.card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--gray-100);
+  transition: all 0.2s;
+}
+
+.card:hover { box-shadow: var(--shadow-lg); }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--gray-200);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.card-title { 
+  font-size: 1.25rem; 
+  font-weight: 600; 
+  color: var(--gray-900); 
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 1rem;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.stat-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+.stat-success { background: linear-gradient(135deg, var(--success), #059669); color: white; }
+.stat-warning { background: linear-gradient(135deg, var(--warning), #d97706); color: white; }
+.stat-danger { background: linear-gradient(135deg, var(--danger), #dc2626); color: white; }
+
+.stat-number { 
+  font-size: 2.5rem; 
+  font-weight: 700; 
+  margin-bottom: 0.25rem;
+  background: linear-gradient(135deg, var(--gray-700), var(--gray-900));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-label { color: var(--gray-500); font-weight: 500; }
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  background: var(--white);
+  color: var(--gray-900);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 0.1);
+}
+
+.btn {
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+}
+
+.btn-primary:hover { 
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border: 2px solid var(--gray-200);
+}
+
+.btn-secondary:hover {
+  background: var(--gray-200);
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover { background: #dc2626; }
+
+.list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.75rem;
+  background: var(--gray-50);
+  transition: all 0.2s;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.list-item:hover { background: var(--white); box-shadow: var(--shadow-sm); }
+
+.list-item-content { flex: 1; }
+.list-item-actions { display: flex; gap: 0.5rem; }
+
+.progress-container {
+  background: var(--gray-100);
+  border-radius: var(--radius-lg);
+  height: 12px;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--success), #059669);
+  width: 0%;
+  transition: width 0.5s ease;
+  border-radius: var(--radius-lg);
+}
+
+.progress-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.chart-container {
+  position: relative;
+  height: 300px;
+  margin-top: 1rem;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.modal-content {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--gray-500);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover { background: var(--gray-100); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.w-full { width: 100%; }
+
+.notification-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--danger);
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications {
+  position: relative;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.notifications:hover { background: var(--gray-100); }
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  transition: background 0.2s;
+}
+
+.user-profile:hover { background: var(--gray-100); }
+
+.profile-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+}
+
+.btn-sm {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.error-message {
+  color: var(--danger);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.success-message {
+  color: var(--success);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.auth-toggle {
+  text-align: center;
+  margin-top: 1rem;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.auth-toggle:hover { text-decoration: underline; }
+
+@media (max-width: 1024px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main-content { margin-left: 0; width: 100%; }
+  .mobile-menu-toggle { display: block; }
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .header { padding: 1rem; }
+  .main-content { padding: 1rem; }
+  .dashboard-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="app-container">
+  <header class="header">
+    <div class="header-left">
+      <button class="mobile-menu-toggle" onclick="window.toggleSidebar()">
+        <i class="fas fa-bars"></i>
+      </button>
+      <h1>AI Study Planner Pro</h1>
+    </div>
+    <div class="header-actions">
+      <div class="notifications" onclick="window.toggleNotifications()">
+        <i class="fas fa-bell"></i>
+        <span class="notification-badge" id="notificationCount">0</span>
+      </div>
+      <button class="theme-toggle" onclick="window.toggleTheme()">
+        <i class="fas fa-moon" id="themeIcon"></i>
+      </button>
+      <div class="user-profile" onclick="window.showUserMenu()">
+        <div class="profile-avatar" id="profileAvatar">G</div>
+        <span id="currentUser">Guest</span>
+        <i class="fas fa-chevron-down"></i>
+      </div>
+    </div>
+  </header>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-nav">
+      <div class="nav-item active" data-page="dashboard"><i class="fas fa-home"></i><span>Dashboard</span></div>
+      <div class="nav-item" data-page="subjects"><i class="fas fa-book"></i><span>Subjects</span></div>
+      <div class="nav-item" data-page="schedule"><i class="fas fa-calendar-alt"></i><span>Schedule</span></div>
+      <div class="nav-item" data-page="tasks"><i class="fas fa-tasks"></i><span>Tasks</span></div>
+      <div class="nav-item" data-page="questions"><i class="fas fa-question-circle"></i><span>Questions</span></div>
+      <div class="nav-item" data-page="progress"><i class="fas fa-chart-line"></i><span>Progress</span></div>
+      <div class="nav-item" data-page="resources"><i class="fas fa-folder-open"></i><span>Resources</span></div>
+      <div class="nav-item" data-page="analytics"><i class="fas fa-chart-bar"></i><span>Analytics</span></div>
+      <div class="nav-item" data-page="settings"><i class="fas fa-cog"></i><span>Settings</span></div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <!-- Auth Modal (Login/Signup) -->
+    <div id="authModal" class="modal" style="display: flex;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="authTitle">Login to Your Account</h2>
+          <button class="modal-close" onclick="window.closeAuthModal()">&times;</button>
+        </div>
+        <div id="authForm">
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" id="authEmail" class="form-input" placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" id="authPassword" class="form-input" placeholder="••••••••">
+          </div>
+          <div id="authError" class="error-message"></div>
+          <button class="btn btn-primary w-full" onclick="window.handleAuth()">
+            <i class="fas fa-sign-in-alt"></i> Login
+          </button>
+          <div class="auth-toggle" onclick="window.toggleAuthMode()">
+            Don't have an account? Sign up
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Menu Modal -->
+    <div id="userMenuModal" class="modal">
+      <div class="modal-content" style="max-width: 300px;">
+        <div class="modal-header">
+          <h2>Account</h2>
+          <button class="modal-close" onclick="window.closeUserMenu()">&times;</button>
+        </div>
+        <div id="userInfo"></div>
+        <button class="btn btn-danger w-full" onclick="window.logout()">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </div>
+    </div>
+
+    <!-- Dashboard Page -->
+    <div id="dashboard" class="page active">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Welcome back, <span id="profileName">Student</span>!</h2>
+            <p>Your personalized study journey</p>
+          </div>
+          <div class="quick-actions">
+            <button class="btn btn-primary" onclick="window.autoPlan()"><i class="fas fa-magic"></i> AI Plan</button>
+            <button class="btn btn-secondary" onclick="window.openQuickAdd()"><i class="fas fa-plus"></i> Quick Add</button>
+          </div>
+        </div>
+      </div>
+      <div class="dashboard-grid">
+        <div class="card stat-card"><div class="stat-icon stat-primary"><i class="fas fa-calendar-check"></i></div><div class="stat-number" id="sessionsCount">0</div><div class="stat-label">Sessions Planned</div></div>
+        <div class="card stat-card"><div class="stat-icon stat-success"><i class="fas fa-check-circle"></i></div><div class="stat-number" id="completionRate">0%</div><div class="stat-label">Completion Rate</div></div>
+        <div class="card stat-card"><div class="stat-icon stat-warning"><i class="fas fa-clock"></i></div><div class="stat-number" id="totalHours">0h</div><div class="stat-label">Total Study Hours</div></div>
+        <div class="card stat-card"><div class="stat-icon stat-danger"><i class="fas fa-fire"></i></div><div class="stat-number" id="streakCount">0</div><div class="stat-label">Day Streak</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-header"><h3 class="card-title">Upcoming Sessions</h3></div><div id="upcomingSessions"></div></div>
+        <div class="card"><div class="card-header"><h3 class="card-title">Study Focus</h3></div><div id="focusAreas"></div></div>
+      </div>
+    </div>
+
+    <!-- Other Pages (simplified for brevity) -->
+    <div id="subjects" class="page"><div class="card"><div class="card-header"><h2 class="card-title">Manage Subjects</h2><button class="btn btn-primary" onclick="window.openSubjectModal()"><i class="fas fa-plus"></i> Add Subject</button></div><div id="subjectsList"></div></div></div>
+    <div id="schedule" class="page"><div class="card"><div class="card-header"><h2 class="card-title">Study Schedule</h2><button class="btn btn-primary" onclick="window.openScheduleModal()"><i class="fas fa-plus"></i> Schedule Session</button></div><div id="scheduleList"></div></div></div>
+    <div id="tasks" class="page"><div class="card"><div class="card-header"><h2 class="card-title">Task Manager</h2><button class="btn btn-primary" onclick="window.openTaskModal()"><i class="fas fa-plus"></i> Add Task</button></div><div id="tasksList"></div></div></div>
+    <div id="questions" class="page"><div class="card"><div class="card-header"><h2 class="card-title">Important Questions</h2><div><button class="btn btn-primary" onclick="window.openQuestionModal()"><i class="fas fa-plus"></i> Add Question</button><button class="btn btn-secondary" onclick="window.generateAIQuestions()"><i class="fas fa-robot"></i> AI Generate</button></div></div><div id="questionsList"></div></div></div>
+    <div id="progress" class="page"><div class="card"><div class="card-header"><h2 class="card-title">Progress Overview</h2></div><div class="progress-container"><div class="progress-bar" id="mainProgressBar"></div></div><p class="progress-text" id="progressText">0% Complete</p><div class="chart-container"><canvas id="progressChart"></canvas></div></div></div>
+    <div id="resources" class="page"><div class="card"><div class="card-header"><h2 class="card-title">Study Resources</h2><button class="btn btn-primary" onclick="window.openResourceModal()"><i class="fas fa-plus"></i> Add Resource</button></div><div id="resourcesList"></div></div></div>
+    <div id="analytics" class="page"><div class="grid-2"><div class="card"><div class="card-header"><h3 class="card-title">Study Time Analytics</h3></div><div class="chart-container"><canvas id="timeChart"></canvas></div></div><div class="card"><div class="card-header"><h3 class="card-title">Subject Performance</h3></div><div class="chart-container"><canvas id="subjectChart"></canvas></div></div></div></div>
+    <div id="settings" class="page"><div class="card"><div class="card-header"><h2 class="card-title">Settings</h2></div><div class="form-group"><label class="form-label">Daily Study Hours Goal</label><input type="number" id="dailyGoal" class="form-input" value="4"></div><div class="form-group"><label class="form-label">Study Reminders</label><label class="checkbox-container"><input type="checkbox" id="remindersEnabled" checked> Enable notifications</label></div><button class="btn btn-primary" onclick="window.saveSettings()">Save Settings</button></div></div>
+  </main>
+</div>
+
+<!-- Quick Add & Other Modals (simplified) -->
+<div id="quickAddModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Quick Add</h2><button class="modal-close" onclick="window.closeModal('quickAddModal')">&times;</button></div><div class="form-group"><label class="form-label">What do you want to add?</label><select id="quickAddType" class="form-select"><option value="subject">Subject</option><option value="task">Task</option><option value="session">Study Session</option></select></div><div id="quickAddFields"></div><button class="btn btn-primary w-full" onclick="window.addQuickItem()">Add Item</button></div></div>
+<div id="subjectModal" class="modal"><div class="modal-content"><div class="modal-header"><h2 id="subjectModalTitle">Add Subject</h2><button class="modal-close" onclick="window.closeModal('subjectModal')">&times;</button></div><form id="subjectForm"><input type="hidden" id="editSubjectIndex"><div class="form-group"><label class="form-label">Subject Name</label><input type="text" id="subjectName" class="form-input" required></div><div class="form-group"><label class="form-label">Total Hours Needed</label><input type="number" id="subjectHours" class="form-input" required></div><div class="form-group"><label class="form-label">Difficulty (1-5)</label><select id="subjectDifficulty" class="form-select"><option value="1">Easy</option><option value="2">Medium</option><option value="3" selected>Moderate</option><option value="4">Hard</option><option value="5">Very Hard</option></select></div><div class="form-group"><label class="form-label">Color</label><input type="color" id="subjectColor" class="form-input" value="#6366f1"></div></form><div class="modal-actions" style="display: flex; gap: 1rem; justify-content: flex-end;"><button class="btn btn-secondary" onclick="window.closeModal('subjectModal')">Cancel</button><button class="btn btn-primary" onclick="window.saveSubject()">Save Subject</button></div></div></div>
+<div id="scheduleModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Add Study Session</h2><button class="modal-close" onclick="window.closeModal('scheduleModal')">&times;</button></div><div class="form-group"><label class="form-label">Topic</label><input type="text" id="sessionTopic" class="form-input"></div><div class="form-group"><label class="form-label">Date & Time</label><input type="datetime-local" id="sessionDate" class="form-input"></div><div class="form-group"><label class="form-label">Duration (hours)</label><input type="number" id="sessionDuration" class="form-input" step="0.5" value="1"></div><button class="btn btn-primary w-full" onclick="window.addSchedule()">Save Session</button></div></div>
+<div id="taskModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Add Task</h2><button class="modal-close" onclick="window.closeModal('taskModal')">&times;</button></div><div class="form-group"><label class="form-label">Task Name</label><input type="text" id="taskName" class="form-input"></div><div class="form-group"><label class="form-label">Due Date</label><input type="date" id="taskDueDate" class="form-input"></div><button class="btn btn-primary w-full" onclick="window.addTask()">Save Task</button></div></div>
+<div id="questionModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Add Question</h2><button class="modal-close" onclick="window.closeModal('questionModal')">&times;</button></div><div class="form-group"><label class="form-label">Question</label><textarea id="questionText" class="form-textarea" rows="3"></textarea></div><div class="form-group"><label class="form-label">Subject</label><input type="text" id="questionSubject" class="form-input" placeholder="e.g., Mathematics"></div><button class="btn btn-primary w-full" onclick="window.addQuestion()">Save Question</button></div></div>
+<div id="resourceModal" class="modal"><div class="modal-content"><div class="modal-header"><h2>Add Resource</h2><button class="modal-close" onclick="window.closeModal('resourceModal')">&times;</button></div><div class="form-group"><label class="form-label">Title</label><input type="text" id="resourceTitle" class="form-input"></div><div class="form-group"><label class="form-label">Link</label><input type="url" id="resourceLink" class="form-input" placeholder="https://..."></div><button class="btn btn-primary w-full" onclick="window.addResource()">Save Resource</button></div></div>
+<div id="notificationsPanel" class="modal"><div class="modal-content"><div class="modal-header"><h2>Notifications</h2><button class="modal-close" onclick="window.closeNotifications()">&times;</button></div><div id="notificationsList"></div></div></div>
+
+<script>
+// User Authentication System
+let currentUser = null;
+let usersDB = {};
+
+// Load users from localStorage
+function loadUsers() {
+  const saved = localStorage.getItem('studyPlanner_users');
+  if (saved) {
+    usersDB = JSON.parse(saved);
+  } else {
+    // Demo user for testing
+    usersDB = {
+      "demo@example.com": {
+        email: "demo@example.com",
+        password: "demo123",
+        name: "Demo User",
+        createdAt: new Date().toISOString(),
+        data: {
+          subjects: [],
+          schedules: [],
+          tasks: [],
+          questions: [],
+          resources: [],
+          settings: { dailyGoal: 4, remindersEnabled: true },
+          stats: { completed: 0, totalHours: 0, streak: 0 },
+          notifications: []
+        }
+      }
+    };
+    saveUsers();
+  }
+}
+
+function saveUsers() {
+  localStorage.setItem('studyPlanner_users', JSON.stringify(usersDB));
+}
+
+// Save current user's data
+function saveUserData() {
+  if (currentUser && usersDB[currentUser.email]) {
+    usersDB[currentUser.email].data = {
+      subjects: appState.subjects,
+      schedules: appState.schedules,
+      tasks: appState.tasks,
+      questions: appState.questions,
+      resources: appState.resources,
+      settings: appState.settings,
+      stats: appState.stats,
+      notifications: appState.notifications
+    };
+    saveUsers();
+  }
+}
+
+// Load user's data
+function loadUserData(userEmail) {
+  const user = usersDB[userEmail];
+  if (user && user.data) {
+    appState.subjects = user.data.subjects || [];
+    appState.schedules = user.data.schedules || [];
+    appState.tasks = user.data.tasks || [];
+    appState.questions = user.data.questions || [];
+    appState.resources = user.data.resources || [];
+    appState.settings = user.data.settings || { dailyGoal: 4, remindersEnabled: true };
+    appState.stats = user.data.stats || { completed: 0, totalHours: 0, streak: 0 };
+    appState.notifications = user.data.notifications || [];
+  } else {
+    // Initialize empty state for new user
+    appState.subjects = [];
+    appState.schedules = [];
+    appState.tasks = [];
+    appState.questions = [];
+    appState.resources = [];
+    appState.settings = { dailyGoal: 4, remindersEnabled: true };
+    appState.stats = { completed: 0, totalHours: 0, streak: 0 };
+    appState.notifications = [];
+  }
+  saveUserData();
+}
+
+// App State
+let appState = {
+  subjects: [],
+  schedules: [],
+  tasks: [],
+  questions: [],
+  resources: [],
+  settings: { dailyGoal: 4, remindersEnabled: true },
+  stats: { completed: 0, totalHours: 0, streak: 0 },
+  notifications: []
+};
+
+let charts = {};
+let isAuthMode = true; // true = login, false = signup
+
+// Auth Functions
+window.handleAuth = function() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errorDiv = document.getElementById('authError');
+  
+  if (!email || !password) {
+    errorDiv.textContent = 'Please fill in all fields';
+    return;
+  }
+  
+  if (isAuthMode) {
+    // Login
+    if (usersDB[email] && usersDB[email].password === password) {
+      currentUser = { email: email, name: usersDB[email].name || email.split('@')[0] };
+      loadUserData(email);
+      closeAuthModal();
+      updateUIAfterLogin();
+      showNotification('Welcome back!', `Hello ${currentUser.name}`, 'success');
+    } else {
+      errorDiv.textContent = 'Invalid email or password';
+    }
+  } else {
+    // Signup
+    if (usersDB[email]) {
+      errorDiv.textContent = 'Email already exists';
+      return;
+    }
+    usersDB[email] = {
+      email: email,
+      password: password,
+      name: email.split('@')[0],
+      createdAt: new Date().toISOString(),
+      data: {
+        subjects: [],
+        schedules: [],
+        tasks: [],
+        questions: [],
+        resources: [],
+        settings: { dailyGoal: 4, remindersEnabled: true },
+        stats: { completed: 0, totalHours: 0, streak: 0 },
+        notifications: []
+      }
+    };
+    saveUsers();
+    currentUser = { email: email, name: email.split('@')[0] };
+    loadUserData(email);
+    closeAuthModal();
+    updateUIAfterLogin();
+    showNotification('Account created!', `Welcome to Study Planner, ${currentUser.name}`, 'success');
+  }
+};
+
+window.toggleAuthMode = function() {
+  isAuthMode = !isAuthMode;
+  const title = document.getElementById('authTitle');
+  const button = document.querySelector('#authForm .btn-primary');
+  const toggleText = document.querySelector('.auth-toggle');
+  
+  if (isAuthMode) {
+    title.textContent = 'Login to Your Account';
+    button.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+    toggleText.innerHTML = "Don't have an account? Sign up";
+  } else {
+    title.textContent = 'Create New Account';
+    button.innerHTML = '<i class="fas fa-user-plus"></i> Sign Up';
+    toggleText.innerHTML = "Already have an account? Login";
+  }
+  document.getElementById('authError').textContent = '';
+};
+
+window.closeAuthModal = function() {
+  document.getElementById('authModal').style.display = 'none';
+};
+
+window.logout = function() {
+  saveUserData();
+  currentUser = null;
+  closeUserMenu();
+  // Reset app state
+  appState = {
+    subjects: [],
+    schedules: [],
+    tasks: [],
+    questions: [],
+    resources: [],
+    settings: { dailyGoal: 4, remindersEnabled: true },
+    stats: { completed: 0, totalHours: 0, streak: 0 },
+    notifications: []
+  };
+  document.getElementById('authModal').style.display = 'flex';
+  isAuthMode = true;
+  toggleAuthMode();
+};
+
+window.showUserMenu = function() {
+  if (!currentUser) return;
+  document.getElementById('userInfo').innerHTML = `
+    <div style="text-align: center; margin-bottom: 1rem;">
+      <div class="profile-avatar" style="width: 60px; height: 60px; font-size: 1.5rem; margin: 0 auto 1rem;">${currentUser.name.charAt(0).toUpperCase()}</div>
+      <h3>${currentUser.name}</h3>
+      <p style="color: var(--gray-500); font-size: 0.875rem;">${currentUser.email}</p>
+      <p style="color: var(--gray-500); font-size: 0.75rem; margin-top: 0.5rem;">Member since ${new Date(usersDB[currentUser.email]?.createdAt).toLocaleDateString()}</p>
+    </div>
+  `;
+  document.getElementById('userMenuModal').style.display = 'flex';
+};
+
+window.closeUserMenu = function() {
+  document.getElementById('userMenuModal').style.display = 'none';
+};
+
+function updateUIAfterLogin() {
+  updateProfileUI();
+  renderAll();
+  updateDashboard();
+  initCharts();
+}
+
+function updateProfileUI() {
+  if (currentUser) {
+    document.getElementById('profileName').textContent = currentUser.name;
+    document.getElementById('currentUser').textContent = currentUser.name;
+    document.getElementById('profileAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
+  }
+}
+
+// Check if user is logged in on load
+function checkAuth() {
+  loadUsers();
+  // Check for previously logged in user
+  const lastUser = localStorage.getItem('lastLoggedInUser');
+  if (lastUser && usersDB[lastUser]) {
+    currentUser = { email: lastUser, name: usersDB[lastUser].name || lastUser.split('@')[0] };
+    loadUserData(lastUser);
+    closeAuthModal();
+    updateUIAfterLogin();
+  } else {
+    document.getElementById('authModal').style.display = 'flex';
+  }
+}
+
+// Save last logged in user
+function saveLastUser() {
+  if (currentUser) {
+    localStorage.setItem('lastLoggedInUser', currentUser.email);
+  } else {
+    localStorage.removeItem('lastLoggedInUser');
+  }
+}
+
+// Override save functions to include user data persistence
+const originalSaveState = saveUserData;
+window.saveUserData = saveUserData;
+
+// Rest of the app functions (simplified versions of previous implementation)
+function saveState() { saveUserData(); }
+function showPage(pageId) { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById(pageId).classList.add('active'); }
+document.querySelectorAll('.nav-item').forEach(item => { item.addEventListener('click', () => { const page = item.dataset.page; showPage(page); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); item.classList.add('active'); }); });
+
+// Quick implementations for main features
+window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+window.openQuickAdd = () => { document.getElementById('quickAddModal').style.display = 'flex'; window.toggleQuickAddFields(); };
+window.toggleQuickAddFields = function() { const type = document.getElementById('quickAddType').value; const fields = { subject: '<div class="form-group"><label>Subject Name</label><input id="quickSubjectName" class="form-input"></div><div class="form-group"><label>Hours</label><input id="quickSubjectHours" type="number" class="form-input" value="4"></div>', task: '<div class="form-group"><label>Task Name</label><input id="quickTaskName" class="form-input"></div>', session: '<div class="form-group"><label>Topic</label><input id="quickSessionTopic" class="form-input"></div><div class="form-group"><label>Duration</label><input id="quickSessionDuration" type="number" class="form-input" step="0.5" value="1"></div>' }; document.getElementById('quickAddFields').innerHTML = fields[type] || ''; };
+window.addQuickItem = function() { const type = document.getElementById('quickAddType').value; if(type === 'subject') { const name = document.getElementById('quickSubjectName')?.value; if(name) appState.subjects.push({ id: Date.now(), name, totalHours: parseFloat(document.getElementById('quickSubjectHours').value), hoursRemaining: parseFloat(document.getElementById('quickSubjectHours').value), difficulty: 3, color: '#6366f1' }); renderSubjects(); } else if(type === 'task') { const name = document.getElementById('quickTaskName')?.value; if(name) appState.tasks.push({ id: Date.now(), name, completed: false, dueDate: new Date().toISOString() }); renderTasks(); } else if(type === 'session') { const topic = document.getElementById('quickSessionTopic')?.value; if(topic) appState.schedules.push({ id: Date.now(), topic, date: new Date(Date.now() + 86400000).toISOString(), duration: parseFloat(document.getElementById('quickSessionDuration').value), completed: false }); renderSchedules(); } closeModal('quickAddModal'); saveState(); updateDashboard(); };
+
+// Subject functions
+window.openSubjectModal = (idx=null) => { if(idx!==null){ const s=appState.subjects[idx]; document.getElementById('editSubjectIndex').value=idx; document.getElementById('subjectName').value=s.name; document.getElementById('subjectHours').value=s.totalHours; document.getElementById('subjectDifficulty').value=s.difficulty; document.getElementById('subjectColor').value=s.color; } else { document.getElementById('editSubjectIndex').value=''; document.getElementById('subjectName').value=''; document.getElementById('subjectHours').value=''; } document.getElementById('subjectModal').style.display='flex'; };
+window.saveSubject = function() { const idx = document.getElementById('editSubjectIndex').value; const sub = { id: idx===''?Date.now():appState.subjects[idx].id, name: document.getElementById('subjectName').value, totalHours: parseFloat(document.getElementById('subjectHours').value), hoursRemaining: parseFloat(document.getElementById('subjectHours').value), difficulty: parseInt(document.getElementById('subjectDifficulty').value), color: document.getElementById('subjectColor').value }; if(idx==='') appState.subjects.push(sub); else appState.subjects[idx]=sub; closeModal('subjectModal'); renderSubjects(); saveState(); updateDashboard(); };
+function renderSubjects() { const container = document.getElementById('subjectsList'); if(!appState.subjects.length) { container.innerHTML='<div style="text-align:center;padding:2rem"><i class="fas fa-book fa-3x"></i><p>No subjects added</p></div>'; return; } container.innerHTML = appState.subjects.map((s,i)=>`<div class="list-item"><div><strong>${s.name}</strong><div>${s.hoursRemaining.toFixed(1)}h left • Difficulty ${s.difficulty}/5</div></div><div><div class="progress-container" style="width:100px"><div class="progress-bar" style="width:${((1-s.hoursRemaining/s.totalHours)*100)}%"></div></div><button class="btn btn-secondary btn-sm" onclick="window.openSubjectModal(${i})"><i class="fas fa-edit"></i></button><button class="btn btn-danger btn-sm" onclick="window.deleteSubject(${i})"><i class="fas fa-trash"></i></button></div></div>`).join(''); }
+window.deleteSubject = (i) => { appState.subjects.splice(i,1); renderSubjects(); saveState(); updateDashboard(); };
+
+// Schedule functions
+window.openScheduleModal = () => document.getElementById('scheduleModal').style.display='flex';
+window.addSchedule = function() { const topic = document.getElementById('sessionTopic').value; if(topic) { appState.schedules.push({ id: Date.now(), topic, date: document.getElementById('sessionDate').value || new Date().toISOString(), duration: parseFloat(document.getElementById('sessionDuration').value), completed: false }); renderSchedules(); closeModal('scheduleModal'); saveState(); updateDashboard(); showNotification('Schedule Added', `Session "${topic}" planned`, 'info'); } };
+function renderSchedules() { const container = document.getElementById('scheduleList'); if(!appState.schedules.length) { container.innerHTML='<div style="text-align:center;padding:2rem">No sessions scheduled</div>'; return; } container.innerHTML = appState.schedules.map(s=>`<div class="list-item"><div><strong>${s.topic}</strong><div>${new Date(s.date).toLocaleString()} • ${s.duration}h</div></div><div><button class="btn btn-primary btn-sm" onclick="window.completeSchedule('${s.id}')"><i class="fas fa-check"></i> Complete</button><button class="btn btn-danger btn-sm" onclick="window.deleteSchedule('${s.id}')"><i class="fas fa-trash"></i></button></div></div>`).join(''); }
+window.completeSchedule = (id) => { const s = appState.schedules.find(s=>s.id==id); if(s && !s.completed){ s.completed=true; appState.stats.completed++; appState.stats.totalHours+=s.duration; saveState(); updateDashboard(); renderSchedules(); showNotification('Great job!', `Completed ${s.topic}`, 'success'); } };
+window.deleteSchedule = (id) => { appState.schedules = appState.schedules.filter(s=>s.id!=id); saveState(); updateDashboard(); renderSchedules(); };
+
+// Task functions
+window.openTaskModal = () => document.getElementById('taskModal').style.display='flex';
+window.addTask = function() { const name = document.getElementById('taskName').value; if(name) { appState.tasks.push({ id: Date.now(), name, completed: false, dueDate: document.getElementById('taskDueDate').value || new Date().toISOString() }); renderTasks(); closeModal('taskModal'); saveState(); } };
+function renderTasks() { const container = document.getElementById('tasksList'); if(!appState.tasks.length) { container.innerHTML='<div style="text-align:center;padding:2rem">No tasks</div>'; return; } container.innerHTML = appState.tasks.map(t=>`<div class="list-item"><div><input type="checkbox" ${t.completed?'checked':''} onchange="window.toggleTask('${t.id}')"> <strong>${t.name}</strong><div>Due: ${new Date(t.dueDate).toDateString()}</div></div><button class="btn btn-danger btn-sm" onclick="window.deleteTask('${t.id}')"><i class="fas fa-trash"></i></button></div>`).join(''); }
+window.toggleTask = (id) => { const t = appState.tasks.find(t=>t.id==id); if(t) t.completed=!t.completed; saveState(); renderTasks(); };
+window.deleteTask = (id) => { appState.tasks = appState.tasks.filter(t=>t.id!=id); saveState(); renderTasks(); };
+
+// Question functions
+window.openQuestionModal = () => document.getElementById('questionModal').style.display='flex';
+window.addQuestion = function() { const text = document.getElementById('questionText').value; if(text) { appState.questions.push({ id: Date.now(), text, subject: document.getElementById('questionSubject').value, difficulty: 3 }); renderQuestions(); closeModal('questionModal'); saveState(); } };
+function renderQuestions() { const container = document.getElementById('questionsList'); if(!appState.questions.length) { container.innerHTML='<div style="text-align:center;padding:2rem">No questions added</div>'; return; } container.innerHTML = appState.questions.map(q=>`<div class="list-item"><div><strong>${q.text}</strong><div>${q.subject || 'General'}</div></div><button class="btn btn-danger btn-sm" onclick="window.deleteQuestion('${q.id}')"><i class="fas fa-trash"></i></button></div>`).join(''); }
+window.deleteQuestion = (id) => { appState.questions = appState.questions.filter(q=>q.id!=id); renderQuestions(); saveState(); };
+
+// Resource functions
+window.openResourceModal = () => document.getElementById('resourceModal').style.display='flex';
+window.addResource = function() { const title = document.getElementById('resourceTitle').value; if(title) { appState.resources.push({ id: Date.now(), title, link: document.getElementById('resourceLink').value }); renderResources(); closeModal('resourceModal'); saveState(); } };
+function renderResources() { const container = document.getElementById('resourcesList'); if(!appState.resources.length) { container.innerHTML='<div style="text-align:center;padding:2rem">No resources</div>'; return; } container.innerHTML = appState.resources.map(r=>`<div class="list-item"><div><strong>${r.title}</strong><div><a href="${r.link}" target="_blank">${r.link||'Link'}</a></div></div><button class="btn btn-danger btn-sm" onclick="window.deleteResource('${r.id}')"><i class="fas fa-trash"></i></button></div>`).join(''); }
+window.deleteResource = (id) => { appState.resources = appState.resources.filter(r=>r.id!=id); renderResources(); saveState(); };
+
+// AI Features
+window.autoPlan = function() { showNotification('AI Plan', 'Generating smart study schedule...', 'info'); setTimeout(() => { const newSession = { id: Date.now(), topic: 'AI Recommended: Core Concepts Review', date: new Date(Date.now()+86400000).toISOString(), duration: 2, completed: false }; appState.schedules.push(newSession); renderSchedules(); saveState(); updateDashboard(); showNotification('Success', 'AI study plan generated!', 'success'); }, 1000); };
+window.generateAIQuestions = function() { showNotification('AI', 'Generating important questions...', 'info'); setTimeout(() => { appState.questions.push({ id: Date.now(), text: 'AI Generated: Explain the key principles of effective time management in studies.', subject: 'Study Skills', difficulty: 3 }); renderQuestions(); saveState(); showNotification('AI', 'New question added!', 'success'); }, 800); };
+
+// Dashboard and Charts
+function updateDashboard() { const rate = appState.schedules.length ? ((appState.stats.completed / appState.schedules.length)*100).toFixed(1) : 0; document.getElementById('sessionsCount').textContent = appState.schedules.length; document.getElementById('completionRate').textContent = rate+'%'; document.getElementById('totalHours').textContent = appState.stats.totalHours.toFixed(1)+'h'; document.getElementById('streakCount').textContent = appState.stats.streak||0; document.getElementById('mainProgressBar').style.width = rate+'%'; document.getElementById('progressText').textContent = rate+'% Complete'; const upcoming = appState.schedules.filter(s=>!s.completed && new Date(s.date) > new Date()).slice(0,5); document.getElementById('upcomingSessions').innerHTML = upcoming.length ? upcoming.map(s=>`<div class="list-item"><div><strong>${s.topic}</strong><div>${new Date(s.date).toLocaleString()}</div></div><button class="btn btn-primary btn-sm" onclick="window.completeSchedule('${s.id}')"><i class="fas fa-check"></i></button></div>`).join('') : '<div style="text-align:center;padding:1rem">No upcoming sessions</div>'; const focus = appState.subjects.sort((a,b)=>b.hoursRemaining - a.hoursRemaining).slice(0,4); document.getElementById('focusAreas').innerHTML = focus.length ? focus.map(s=>`<div class="list-item"><div><strong>${s.name}</strong><div>${s.hoursRemaining.toFixed(1)}h left</div></div><div>${((1-s.hoursRemaining/s.totalHours)*100).toFixed(0)}%</div></div>`).join('') : '<div style="text-align:center;padding:1rem">Add subjects to see focus areas</div>'; updateCharts(); }
+
+function initCharts() { const ctx1 = document.getElementById('progressChart').getContext('2d'); charts.progress = new Chart(ctx1, { type: 'doughnut', data: { labels: ['Completed', 'Remaining'], datasets: [{ data: [0,100], backgroundColor: ['#10b981','#e5e7eb'] }] }, options: { responsive: true, maintainAspectRatio: false } }); const ctx2 = document.getElementById('timeChart').getContext('2d'); charts.time = new Chart(ctx2, { type: 'line', data: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets: [{ label: 'Study Hours', data: [2,3,2.5,4,3.5,1,0], borderColor: '#6366f1', tension: 0.4 }] }, options: { responsive: true } }); const ctx3 = document.getElementById('subjectChart').getContext('2d'); charts.subject = new Chart(ctx3, { type: 'bar', data: { labels: [], datasets: [{ label: 'Progress %', data: [], backgroundColor: [] }] }, options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } } }); }
+function updateCharts() { if(!charts.progress) return; const rate = appState.schedules.length ? (appState.stats.completed / appState.schedules.length)*100 : 0; charts.progress.data.datasets[0].data = [rate, 100-rate]; charts.progress.update('none'); if(charts.subject) { const subData = appState.subjects.map(s => ({ label: s.name, progress: ((1 - s.hoursRemaining/s.totalHours)*100), color: s.color })); charts.subject.data.labels = subData.map(d=>d.label); charts.subject.data.datasets[0].data = subData.map(d=>d.progress); charts.subject.data.datasets[0].backgroundColor = subData.map(d=>d.color); charts.subject.update('none'); } }
+
+function showNotification(title, msg, type='info') { const notif = { id: Date.now(), title, message: msg, timestamp: new Date().toISOString() }; appState.notifications.unshift(notif); if(appState.notifications.length>10) appState.notifications.pop(); document.getElementById('notificationCount').textContent = appState.notifications.length; saveState(); }
+window.toggleNotifications = function() { const panel = document.getElementById('notificationsPanel'); const list = document.getElementById('notificationsList'); list.innerHTML = appState.notifications.length ? appState.notifications.map(n=>`<div class="list-item"><div><strong>${n.title}</strong><div>${n.message}</div><small>${new Date(n.timestamp).toLocaleTimeString()}</small></div></div>`).join('') : '<div style="padding:1rem;text-align:center">No notifications</div>'; panel.style.display = 'flex'; };
+window.closeNotifications = () => document.getElementById('notificationsPanel').style.display = 'none';
+
+let isDark = localStorage.getItem('darkMode') === 'true';
+window.toggleTheme = function() { isDark = !isDark; document.body.classList.toggle('dark', isDark); document.getElementById('themeIcon').className = isDark ? 'fas fa-sun' : 'fas fa-moon'; localStorage.setItem('darkMode', isDark); };
+window.saveSettings = function() { appState.settings.dailyGoal = parseInt(document.getElementById('dailyGoal').value); appState.settings.remindersEnabled = document.getElementById('remindersEnabled').checked; saveState(); showNotification('Settings', 'Preferences saved', 'success'); };
+window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('open');
+
+function renderAll() { renderSubjects(); renderSchedules(); renderTasks(); renderQuestions(); renderResources(); updateDashboard(); }
+
+// Initialize
+checkAuth();
+if (!isDark) document.body.classList.remove('dark');
+else document.body.classList.add('dark');
+document.getElementById('themeIcon').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+</script>
+</body>
+</html>
